@@ -24,27 +24,21 @@ sub merge(&@) {
 
 	my @ret;
 
-	while ( @stream > grep $_->[$empty](), @stream ) {
+	@stream = grep !$_->[$empty](), @stream;
 
-		my @ranked = sort {
-			my $is_a_exh = $a->[$empty]();
-			my $is_b_exh = $b->[$empty]();
-
-			$is_a_exh || $is_b_exh
-				? $is_a_exh - $is_b_exh
-				: $comparator->( $a->[$peek](), $b->[$peek]() );
-
-		} @stream;
+	while ( @stream ) {
+		my @ranked = sort { $comparator->( $a->[$peek](), $b->[$peek]() ) } @stream;
 
 		my $taken = ( shift @ranked )->[$take]();
 
 		for my $stream ( @ranked ) {
-			next if $stream->[$empty]();
 			last if $comparator->( $taken, $stream->[$peek]() );
 			$stream->[$drop]();
 		}
 
 		push @ret, $taken;
+
+		@stream = grep !$_->[$empty](), @stream;
 	}
 
 	return @ret;
