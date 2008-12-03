@@ -8,6 +8,7 @@ use Exporter::Tidy default => [ qw( merge ) ];
 my $empty = sub { local *_ = shift; $_[1] > $#{$_[0]} ? 1 : 0 };
 my $peek  = sub { local *_ = shift; $_[0][$_[1]] };
 my $drop  = sub { local *_ = shift; $_[1]++ };
+my $take  = sub { my $val = $peek->( $_[0] ); $drop->( $_[0] ); $val };
 
 sub merge(&@) {
 	my $comparator = shift;
@@ -27,7 +28,7 @@ sub merge(&@) {
 
 		} @stream;
 
-		my $taken = $peek->( $ranked[0] );
+		my $taken = $take->( shift @ranked );
 
 		for my $s ( @ranked ) {
 			next if $empty->( $s );
