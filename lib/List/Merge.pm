@@ -5,30 +5,34 @@ package List::Merge;
 
 use Exporter::Tidy default => [ qw( merge ) ];
 
+my $empty = sub { $_[1] > $#{$_[0]} ? 1 : 0 };
+my $peek  = sub { $_[0][$_[1]] };
+my $drop  = sub { $_[1]++ };
+
 sub merge(&@) {
 	my $comparator = shift;
 	my @stream = map [ $_, 0 ], @_;
 
 	my @ret;
 
-	while ( @stream > grep { $_->[1] > $#{$_->[0]} } @stream ) {
+	while ( @stream > grep $empty->( @$_ ), @stream ) {
 
 		my @ranked = sort {
-			my $is_a_exh = $a->[1] > $#{$a->[0]} ? 1 : 0;
-			my $is_b_exh = $b->[1] > $#{$b->[0]} ? 1 : 0;
+			my $is_a_exh = $empty->( @$a );
+			my $is_b_exh = $empty->( @$b );
 
 			$is_a_exh || $is_b_exh
 				? $is_a_exh - $is_b_exh
-				: $comparator->( $a->[0][$a->[1]], $b->[0][$b->[1]] );
+				: $comparator->( $peek->( @$a ), $peek->( @$b ) );
 
 		} @stream;
 
-		my $taken = $ranked[0][0][$ranked[0][1]];
+		my $taken = $peek->( @{$ranked[0]} );
 
 		for my $s ( @ranked ) {
-			next if $s->[1] > $#{$s->[0]};
-			last if $comparator->( $taken, $s->[0][$s->[1]] );
-			$s->[1]++;
+			next if $empty->( @$s );
+			last if $comparator->( $taken, $peek->( @$s ) );
+			$drop->( @$s );
 		}
 
 		push @ret, $taken;
