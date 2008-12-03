@@ -7,28 +7,28 @@ use Exporter::Tidy default => [ qw( merge ) ];
 
 sub merge(&@) {
 	my $comparator = shift;
-	my @idx = (0) x @_;
+	my @stream = map [ $_, 0 ], @_;
 
 	my @ret;
 
-	while ( @_ > grep { $idx[$_] > $#{$_[$_]} } 0 .. $#_ ) {
+	while ( @stream > grep { $_->[1] > $#{$_->[0]} } @stream ) {
 
 		my @ranked = sort {
-			my $is_a_exh = $idx[$a] > $#{$_[$a]} ? 1 : 0;
-			my $is_b_exh = $idx[$b] > $#{$_[$b]} ? 1 : 0;
+			my $is_a_exh = $a->[1] > $#{$a->[0]} ? 1 : 0;
+			my $is_b_exh = $b->[1] > $#{$b->[0]} ? 1 : 0;
 
 			$is_a_exh || $is_b_exh
 				? $is_a_exh - $is_b_exh
-				: $comparator->( $_[$a][$idx[$a]], $_[$b][$idx[$b]] );
+				: $comparator->( $a->[0][$a->[1]], $b->[0][$b->[1]] );
 
-		} 0 .. $#_;
+		} @stream;
 
-		my $taken = $_[$ranked[0]][$idx[$ranked[0]]];
+		my $taken = $ranked[0][0][$ranked[0][1]];
 
-		for my $i ( @ranked ) {
-			next if $idx[$i] > $#{$_[$i]};
-			last if $comparator->( $taken, $_[$i][$idx[$i]] );
-			$idx[$i]++;
+		for my $s ( @ranked ) {
+			next if $s->[1] > $#{$s->[0]};
+			last if $comparator->( $taken, $s->[0][$s->[1]] );
+			$s->[1]++;
 		}
 
 		push @ret, $taken;
