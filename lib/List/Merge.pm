@@ -5,35 +5,43 @@ package List::Merge;
 
 use Exporter::Tidy default => [ qw( merge ) ];
 
-my $empty = sub { local *_ = shift; $_[1] > $#{$_[0]} ? 1 : 0 };
-my $peek  = sub { local *_ = shift; $_[0][$_[1]] };
-my $drop  = sub { local *_ = shift; $_[1]++ };
-my $take  = sub { my $val = $peek->( $_[0] ); $drop->( $_[0] ); $val };
+my ( $peek, $take, $drop, $empty ) = ( 0 .. 20 );
+
+my $make_stream = sub {
+	my $array = shift;
+	my $i = 0;
+	my @o;
+	$o[ $peek  ] = sub { $array->[ $i ] };
+	$o[ $take  ] = sub { $array->[ $i++ ] };
+	$o[ $drop  ] = sub { ++$i };
+	$o[ $empty ] = sub { $i > $#$array ? 1 : 0 };
+	return \@o;
+};
 
 sub merge(&@) {
 	my $comparator = shift;
-	my @stream = map [ $_, 0 ], @_;
+	my @stream = map $make_stream->( $_ ), @_;
 
 	my @ret;
 
-	while ( @stream > grep $empty->( $_ ), @stream ) {
+	while ( @stream > grep $_->[$empty](), @stream ) {
 
 		my @ranked = sort {
-			my $is_a_exh = $empty->( $a );
-			my $is_b_exh = $empty->( $b );
+			my $is_a_exh = $a->[$empty]();
+			my $is_b_exh = $b->[$empty]();
 
 			$is_a_exh || $is_b_exh
 				? $is_a_exh - $is_b_exh
-				: $comparator->( $peek->( $a ), $peek->( $b ) );
+				: $comparator->( $a->[$peek](), $b->[$peek]() );
 
 		} @stream;
 
-		my $taken = $take->( shift @ranked );
+		my $taken = ( shift @ranked )->[$take]();
 
-		for my $s ( @ranked ) {
-			next if $empty->( $s );
-			last if $comparator->( $taken, $peek->( $s ) );
-			$drop->( $s );
+		for my $stream ( @ranked ) {
+			next if $stream->[$empty]();
+			last if $comparator->( $taken, $stream->[$peek]() );
+			$stream->[$drop]();
 		}
 
 		push @ret, $taken;
