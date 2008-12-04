@@ -24,9 +24,7 @@ sub merge(&@) {
 
 	my @ret;
 
-	@stream = grep !$_->[$empty](), @stream;
-
-	while ( @stream ) {
+	while ( @stream = grep !$_->[$empty](), @stream ) {
 		my @ranked = sort { $comparator->( $a->[$peek](), $b->[$peek]() ) } @stream;
 
 		my $taken = ( shift @ranked )->[$take]();
@@ -37,8 +35,6 @@ sub merge(&@) {
 		}
 
 		push @ret, $taken;
-
-		@stream = grep !$_->[$empty](), @stream;
 	}
 
 	return @ret;
